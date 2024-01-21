@@ -15,20 +15,20 @@ public class UserServiceImpl implements UserService {
     @Override
     public DefaultPostResponse register(User user){
         if(userRepository.findByUsername(user.getUsername())!=null){
-            return new DefaultPostResponse(false, "that username already use");
+            return new DefaultPostResponse(false, "that username already use", "");
         }
         userRepository.save(user);
-        return new DefaultPostResponse(true, "");
+        return new DefaultPostResponse(true, "", "");
     }
     @Override
     public DefaultPostResponse authorize(User user){
         User findUser = userRepository.findByUsername(user.getUsername());
         if(findUser==null){
-            return new DefaultPostResponse(false, "no such user");
+            return new DefaultPostResponse(false, "no such user", "");
         }
         if(findUser.equals(user)){
-            return new DefaultPostResponse(true, "");
+            return new DefaultPostResponse(true, "", "");
         }
-        return new DefaultPostResponse(false, "wrong password");
+        return new DefaultPostResponse(false, "wrong password", "");
     }
 }

@@ -23,12 +23,12 @@ public class CheckedAttemptServiceImpl implements CheckedAttemptService {
     public DefaultPostResponse addAttempt(Attempt attempt){
         ValidationResponse validationResponse = validator.validate(attempt);
         if(!validationResponse.isSuccessfully()){
-            return new DefaultPostResponse(false, validationResponse.getErrors());
+            return new DefaultPostResponse(false, validationResponse.getErrors(), "");
         }
         CheckedAttempt checkedAttempt = new CheckedAttempt(attempt.getX(), attempt.getY(), attempt.getR(),
                 pointInFigure(attempt));
         repository.save(checkedAttempt);
-        return new DefaultPostResponse(true, "");
+        return new DefaultPostResponse(true, "", "");
     }
     private boolean pointInFigure(Attempt attempt){
         float x = attempt.getX();

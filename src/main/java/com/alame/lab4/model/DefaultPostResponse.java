@@ -9,7 +9,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class DefaultPostResponse {
+public class DefaultPostResponse{
     private boolean successfully;
     private String errors;
+    private String message;
 }
