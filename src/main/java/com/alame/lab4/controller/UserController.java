@@ -1,5 +1,6 @@
 package com.alame.lab4.controller;
 
+import com.alame.lab4.config.JwtTokenUtil;
 import com.alame.lab4.model.*;
 import com.alame.lab4.repository.RoleRepository;
 import com.alame.lab4.repository.UserRepository;
@@ -12,8 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -29,6 +30,7 @@ import java.util.Collections;
 @RestController
 public class UserController {
     private final AuthenticationManager authenticationManager;
+    private final JwtTokenUtil jwtTokenUtil;
     private final NewUserService newUserService;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -36,8 +38,9 @@ public class UserController {
     private SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
-    public UserController(AuthenticationManager authenticationManager, NewUserService newUserService, UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public UserController(AuthenticationManager authenticationManager, JwtTokenUtil jwtTokenUtil, NewUserService newUserService, UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
+        this.jwtTokenUtil = jwtTokenUtil;
         this.newUserService = newUserService;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -45,9 +48,9 @@ public class UserController {
     }
 
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<DefaultPostResponse> register(@RequestBody RegisterDTO registerDTO){
+    public ResponseEntity<JwtAuthResponse> register(@RequestBody RegisterDTO registerDTO){
         if(userRepository.existsByUsername(registerDTO.getUsername())){
-            return new ResponseEntity<>(new DefaultPostResponse(false, "username aleready taken", ""),
+            return new ResponseEntity<>(new JwtAuthResponse(false, "username already taken", "", "", ""),
                     HttpStatus.BAD_REQUEST);
         }
         User user = new User();
@@ -56,17 +59,16 @@ public class UserController {
         Role roles = roleRepository.findByName("ROLE_USER");
         user.setRoles(Collections.singleton(roles));
         userRepository.save(user);
-        return ResponseEntity.ok(new DefaultPostResponse(true, "", "register successfully"));
+        String jwt = jwtTokenUtil.generateToken(user);
+        return ResponseEntity.ok(new JwtAuthResponse(true, "", "register successfully", jwt, user.getUsername()));
     }
     @PostMapping(value = "/login", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<DefaultPostResponse> login(@RequestBody LoginDTO loginDTO, HttpServletRequest request, HttpServletResponse
+    public ResponseEntity<JwtAuthResponse> login(@RequestBody LoginDTO loginDTO, HttpServletRequest request, HttpServletResponse
             response){
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword()));
-        SecurityContext context = SecurityContextHolder.getContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
-        securityContextRepository.saveContext(context, request, response);
-        return ResponseEntity.ok(new DefaultPostResponse(true, "", "login successfully"));
+        UserDetails userDetails = newUserService.loadUserByUsername(loginDTO.getUsername());
+        String jwt = jwtTokenUtil.generateToken(userDetails);
+        return ResponseEntity.ok(new JwtAuthResponse(true, "", "login successfully", jwt, userDetails.getUsername()));
     }
 }
